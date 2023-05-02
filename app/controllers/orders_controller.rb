@@ -1,4 +1,5 @@
 class OrdersController < ApplicationController
+   before_action :authenticate_request, only: [:create, :update]
    def index 
     orders=Order.all
     render json: orders
@@ -10,14 +11,16 @@ class OrdersController < ApplicationController
    end
  
    def create
-      orders = Order.new(new_params)
-      if orders.save
-         render json: orders, status: :created
+      @orders = Order.new(new_params)
+      @orders.user = @current_user
+      @orders.product = Product.find(params[:product_id])
+      if @orders.save
+         @orders.product.quantity -= 1
+         render json: @orders, status: :created
       else
-         render json: orders.errors, status: :unprocessable_entity
+         render json: @orders.errors, status: :unprocessable_entity
       end
    
-   end
  
    def update
       orders = Order.find(params[:id])
@@ -62,7 +65,7 @@ def orders_by_date
     end
    private
    def new_params
-      params.permit(:product_id, :user_id, :quantity, :price)
+      params.permit(:product_id, :quantity, :price)
    end
    def generate_invoice(order)
       invoice = {
